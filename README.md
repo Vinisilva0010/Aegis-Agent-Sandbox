@@ -63,27 +63,8 @@ Ações aprovadas/bloqueadas auditadas para otimização posterior.
 
 ---
 
-*Repositório em desenvolvimento. Contribuições via PR bem-vindas após revisão.*
 
 
 
 
-graph TD
-    LLM[Modelo IA Claude ou GPT] -->|Intencao de Acao via MCP| AEGIS_SERVER
 
-    subgraph Aegis Sandbox Rust
-        AEGIS_SERVER[Axum Server Ingestao] -->|Payload JSON| VALIDATION
-        VALIDATION[Policy Engine Zero Trust] -->|Checa Whitelist| RULES[Manifesto de Regras]
-    end
-
-    VALIDATION -->|Acao Bloqueada| ERROR_SEMANTICO[Erro Semantico]
-    ERROR_SEMANTICO -->|Recalcular Rota| LLM
-
-    VALIDATION -->|Acao Aprovada| CDP_WORKER[Chromium CDP Worker]
-
-    subgraph Mundo Real
-        CDP_WORKER -->|Injeta Evento| BROWSER[Navegador Headless]
-        BROWSER -->|Retorna DOM Atualizado| CDP_WORKER
-    end
-
-    CDP_WORKER -->|Sucesso| LLM
