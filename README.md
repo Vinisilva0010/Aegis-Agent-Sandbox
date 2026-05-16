@@ -1,70 +1,89 @@
 # Aegis-Agent-Sandbox
 
-**Middleware de Segurança para Agentes Autônomos**  
-**Autor:** Vinicius Pontual  
-**Status:** Em Revisão (Draft)  
-**Data:** Março, 2026  
-**Tecnologias Core:** Rust, Tokio, Axum, Prism-MCP, Browser-Use (CDP)
+**Security Middleware for Autonomous Agents**  
+**Author:** Vinicius Pontual  
+**Status:** In Review (Draft)  
+**Date:** March, 2026  
+**Core Technologies:** Rust, Tokio, Axum, Prism-MCP, Browser-Use (CDP)
 
-## 1. Contexto e Objetivo
+## 1. Context and Objective
 
-Modelos de fronteira (LLMs) são probabilísticos e propensos a alucinações. Dar acesso irrestrito ao Chrome DevTools Protocol (CDP) para navegação web ou ações no sistema representa risco crítico de segurança.
+Frontier models (LLMs) are probabilistic and prone to hallucinations. Granting unrestricted access to the Chrome DevTools Protocol (CDP) for web navigation or system actions represents a critical security risk.
 
-O **Aegis-Agent-Sandbox** atua como proxy determinístico de segurança, escrito em Rust para performance e *memory safety*. Ele intercepta intenções do LLM via Model Context Protocol (MCP), valida contra políticas *Zero Trust*, executa ações aprovadas em navegador *headless* e retorna o DOM comprimido.
+The **Aegis-Agent-Sandbox** acts as a deterministic security proxy, written in Rust for performance and *memory safety*. It intercepts LLM intentions via the Model Context Protocol (MCP), validates them against **Zero Trust** policies, executes approved actions in a **headless** browser, and returns a compressed DOM.
 
-## 2. Escopo
+## 2. Scope
 
-### Goals (O que o sistema FAZ)
-- Recebe payloads de intenção via MCP (ex: click, type, Maps).
-- Valida ações contra `policies.yaml` (Domain/Action Whitelisting).
-- Executa em Chromium *headless* isolado via CDP.
-- Retorna erros semânticos claros para o LLM replanejar.
-- Coleta logs (Aprovadas vs. Bloqueadas) para análise.
+### Goals (What the system DOES)
 
-### Non-Goals (O que o sistema NÃO FAZ)
-- Não hospeda/executa LLMs (apenas middleware).
-- Não faz *scraping* em massa (foco em interações pontuais).
-- Sem UI complexa; infraestrutura *headless*.
+- Receives intent payloads via MCP (e.g., click, type, Maps)
+- Validates actions against `policies.yaml` (**Domain/Action Whitelisting**)
+- Executes actions in isolated **headless** Chromium via CDP
+- Returns clear semantic errors so the LLM can replan
+- Collects logs (**Approved vs Blocked**) for analysis
 
-## 3. Arquitetura
+### Non-Goals (What the system DOES NOT DO)
 
-Sistema em **três camadas desacopladas**:
+- Does not host or run LLMs (**middleware only**)
+- Does not perform large-scale scraping (**focused on point interactions**)
+- No complex UI; **headless infrastructure**
 
-| Camada | Responsabilidade | Tecnologias |
-|--------|------------------|-------------|
-| **Transport Layer** | MCP Server (HTTP/WebSockets) | Axum |
-| **Policy Engine** | Validação de Guardrails | Rust puro + Serde |
-| **Execution Env** | Chromium lifecycle + DOM injection | CDP Worker |
+## 3. Architecture
 
-## 4. Fluxo de Dados
+System built in **three decoupled layers**:
 
+### Transport Layer
+**Responsibility:** MCP Server (HTTP/WebSockets)  
+**Technologies:** Axum  
+
+### Policy Engine
+**Responsibility:** Guardrail validation  
+**Technologies:** Rust + Serde  
+
+### Execution Environment
+**Responsibility:** Chromium lifecycle + DOM injection  
+**Technologies:** CDP Worker  
+
+## 4. Data Flow
 LLM → MCP Payload → Aegis Ingest → Policy Check → CDP Exec → DOM Snapshot → LLM
 
 text
 
-**Exemplo real:** LLM quer comprar item → `{"tool": "web_action", "params": {"action": "click", "selector": "#buy", "url": "amazon.com"}}`
+### Real Example
 
-1. **Ingestão:** Axum → Rust structs (serde).
-2. **Validação:** `amazon.com` whitelisted? `click` permitido?
-3. **Execução:** CDP Worker clica `#buy`.
-4. **Observability:** Extrai *Accessibility Tree* compactada.
-5. **Retorno:** Sucesso + novo estado para LLM.
+LLM wants to buy an item:
+{
+"tool": "web_action",
+"params": {
+"action": "click",
+"selector": "#buy",
+"url": "amazon.com"
+} }
 
-## 5. Segurança
+text
+
+### Flow
+
+1. **Ingestion:** Axum → Rust structs (Serde)  
+2. **Validation:** Is `amazon.com` whitelisted? Is `click` allowed?  
+3. **Execution:** CDP Worker clicks `#buy`  
+4. **Observability:** Extracts compacted **Accessibility Tree**  
+5. **Return:** Success + new state for the LLM  
+
+## 5. Security
 
 ### Prompt Injection
-Validação rigorosa de tipos em Rust bloqueia payloads maliciosos na deserialização (ex: `<script>alert(1)</script>` em campo URL).
+
+Strict type validation in Rust blocks malicious payloads during deserialization  
+(e.g., `<script>alert(1)</script>` in the URL field).
 
 ### Timeouts
-`tokio::time::timeout(5s)` em todas requisições CDP. Sites lentos = abort + erro pro agente.
+tokio::time::timeout(Duration::from_secs(5), task)
+
+text
+
+Slow sites → abort + error returned to the agent.
 
 ### Logs
-Ações aprovadas/bloqueadas auditadas para otimização posterior.
 
----
-
-
-
-
-
-
+Approved and blocked actions are audited for future optimization.
